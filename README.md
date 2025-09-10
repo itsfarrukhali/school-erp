@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏫 School ERP System
 
-## Getting Started
+A modern **School Management System (ERP)** built with **Next.js 15, TypeScript, Prisma, NeonDB, and ShadCN UI**.  
+This project is designed to help schools in Pakistan (and beyond) manage students, teachers, fees, and academic records with **ease, speed, and security**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features (Phase 1)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Student Management**: Admissions, profiles, sibling linking, ID cards.
+- **Parent & Guardian Management**.
+- **Fee Management**: Vouchers, payment tracking, due alerts.
+- **Attendance**: Daily attendance + WhatsApp notification to parents.
+- **Exams & Results**: Marks entry, PDF report card.
+- **Teacher Management**: Profiles, attendance, payroll.
+- **Admin Dashboard**: Manage schools, roles, and staff.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📅 Roadmap
 
-## Learn More
+### Phase 1 (3–4 months)
 
-To learn more about Next.js, take a look at the following resources:
+- Student, Parent, Teacher, Fee, Attendance, Exams, Dashboard.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Phase 2
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Parent Portal (Web + Mobile).
+- Online Fee Payment (JazzCash, EasyPaisa).
+- Timetable & Homework.
+- Advanced Notifications (SMS/WhatsApp).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Frontend**: Next.js 15, TypeScript, TailwindCSS, ShadCN UI
+- **Backend**: Next.js API Routes + Prisma ORM
+- **Database**: PostgreSQL (NeonDB free tier for Phase 1)
+- **Caching & Queues (Future)**: Redis (Upstash)
+- **Version Control**: Git + GitHub
+
+---
+
+## 📂 Project Setup
+
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/<your-username>/school-erp.git
+   cd school-erp
+   npm install
+   ```
+2. Create a `.env` file based on `.env.example`.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
