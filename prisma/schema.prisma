@@ -1,0 +1,531 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  uid         String   @unique
+  username    String   @unique
+  firstName   String
+  lastName    String
+  fullName    String?
+  email       String   @unique
+  password    String
+  role        Role     @default(STUDENT)
+  gender      Gender
+  dob         DateTime
+  phoneNo     String?
+  designation String?
+  address     Json? // Custom address for each user
+  avatarUrl   String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  school           School?           @relation(fields: [schoolId], references: [id])
+  schoolId         String?
+  schoolAdmin      SchoolAdmin?
+  accountant       Accountant?
+  admissionOfficer AdmissionOfficer?
+  computerOperator ComputerOperator?
+  teacher          Teacher?
+  student          Student?
+  parent           Parent?
+  attendances      Attendance[]
+  salary           Salary?
+  qualifications   Qualification[]
+  experiences      Experience[]
+  bankDetails      BankDetail?
+
+  @@map("users")
+}
+
+model School {
+  id          String      @id @default(cuid())
+  sid         String      @unique
+  name        String
+  code        String      @unique
+  address     Json // School address
+  phone       String?
+  whatsapp    String?
+  facebook    String?
+  instagram   String?
+  email       String?
+  website     String?
+  logoUrl     String?
+  bankDetails BankDetail?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  users            User[]
+  classes          Class[]
+  subjects         Subject[]
+  students         Student[]
+  fees             FeeStructure[]
+  Teacher          Teacher[]
+  Attendance       Attendance[]
+  Salary           Salary[]
+  SchoolAdmin      SchoolAdmin[]
+  Accountant       Accountant[]
+  AdmissionOfficer AdmissionOfficer[]
+  ComputerOperator ComputerOperator[]
+
+  @@map("schools")
+}
+
+model Student {
+  id           String      @id @default(cuid())
+  studentId    String      @unique
+  grNumber     String      @unique // Registration Number
+  kidNo        Int
+  isEldest     Boolean
+  studentName  String
+  shortName    String
+  dateOfBirth  DateTime
+  gender       Gender
+  religion     Religion
+  placeOfBirth String?
+  bloodGroup   BloodGroup?
+  nationality  Nationality
+  city         String?
+  postalCode   Int?
+  bFormNumber  String?
+  areaName     String
+  address      Json
+  phoneNumber  String?
+  whatsapp     String?
+  email        String?
+  status       Status      @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  userId           String             @unique
+  user             User               @relation(fields: [userId], references: [id])
+  schoolId         String
+  school           School             @relation(fields: [schoolId], references: [id])
+  familyId         String
+  family           Family             @relation(fields: [familyId], references: [id])
+  classId          String?
+  class            Class?             @relation(fields: [classId], references: [id])
+  payments         Payment[]
+  attendances      Attendance[]
+  educationHistory EducationHistory[]
+  Parent           Parent?            @relation(fields: [parentId], references: [id])
+  parentId         String?
+
+  @@map("students")
+}
+
+model Family {
+  id               String   @id @default(cuid())
+  familyId         String   @unique
+  fatherName       String
+  motherName       String
+  guardianName     String
+  guardianRelation String
+  guardianGender   Gender
+  kidsCount        Int
+  religion         String
+  nationality      String
+  state            String
+  district         String
+  city             String
+  pincode          Int
+  address          Json // Family address (shared by parents and students)
+  primaryPhone     String
+  secondaryPhone   String?
+  email            String?
+  whatsapp         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  students Student[]
+  parents  Parent[]
+
+  @@map("families")
+}
+
+model Parent {
+  id        String   @id @default(cuid())
+  parentId  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String    @unique
+  user     User      @relation(fields: [userId], references: [id])
+  familyId String
+  family   Family    @relation(fields: [familyId], references: [id])
+  students Student[]
+
+  @@map("parents")
+}
+
+model Teacher {
+  id             String   @id @default(cuid())
+  teacherId      String   @unique
+  qualifications Json? // Array of qualifications
+  joiningDate    DateTime
+  salary         Float
+  status         Status   @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id])
+  schoolId      String
+  school        School         @relation(fields: [schoolId], references: [id])
+  subjects      Subject[]
+  classes       Class[]        @relation("ClassTeacher")
+  classTeacher  Class[]        @relation("ClassHeadTeacher")
+  attendances   Attendance[]
+  salaryHistory Salary[]
+  ClassSubject  ClassSubject[]
+
+  @@map("teachers")
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  grade     String
+  section   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  schoolId      String
+  school        School         @relation(fields: [schoolId], references: [id])
+  teacherId     String?
+  teacher       Teacher?       @relation("ClassTeacher", fields: [teacherId], references: [id])
+  headTeacherId String?
+  headTeacher   Teacher?       @relation("ClassHeadTeacher", fields: [headTeacherId], references: [id])
+  students      Student[]
+  subjects      ClassSubject[]
+
+  @@map("classes")
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  schoolId String
+  school   School         @relation(fields: [schoolId], references: [id])
+  teachers Teacher[]
+  classes  ClassSubject[]
+
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id        String  @id @default(cuid())
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id])
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  @@map("class_subjects")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  date      DateTime
+  status    AttendanceStatus
+  remarks   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  Student   Student? @relation(fields: [studentId], references: [id])
+  studentId String?
+  Teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  teacherId String?
+
+  @@map("attendances")
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  amount      Float
+  paymentDate DateTime
+  dueDate     DateTime
+  status      PaymentStatus
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id])
+  feeStructureId String
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
+
+  @@map("payments")
+}
+
+model FeeStructure {
+  id          String       @id @default(cuid())
+  name        String
+  amount      Float
+  frequency   FeeFrequency
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  schoolId String
+  school   School    @relation(fields: [schoolId], references: [id])
+  payments Payment[]
+
+  @@map("fee_structures")
+}
+
+model Salary {
+  id          String   @id @default(cuid())
+  amount      Float
+  paymentDate DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  Teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  teacherId String?
+
+  @@map("salaries")
+}
+
+model BankDetail {
+  id            String   @id @default(cuid())
+  bankName      String
+  accountTitle  String
+  accountNumber String
+  iban          String?
+  branchCode    String?
+  branchAddress String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id])
+
+  @@map("bank_details")
+}
+
+model EducationHistory {
+  id          String   @id @default(cuid())
+  institution String
+  degree      String
+  year        Int
+  grade       String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  @@map("education_histories")
+}
+
+model Qualification {
+  id          String   @id @default(cuid())
+  degree      String
+  institution String
+  year        Int
+  grade       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("qualifications")
+}
+
+model Experience {
+  id           String    @id @default(cuid())
+  organization String
+  position     String
+  startDate    DateTime
+  endDate      DateTime?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("experiences")
+}
+
+// Role-specific models for school staff
+model SchoolAdmin {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@map("school_admins")
+}
+
+model Accountant {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@map("accountants")
+}
+
+model AdmissionOfficer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@map("admission_officers")
+}
+
+model ComputerOperator {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@map("computer_operators")
+}
+
+// Enums
+enum Role {
+  SUPERADMIN
+  SCHOOLADMIN
+  ACCOUNTANT
+  ADMISSIONOFFICER
+  COMPUTEROPERATOR
+  STUDENT
+  PARENT
+  TEACHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHERS
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum Nationality {
+  PAKISTANI
+  AFGHANISTANI
+  CHINESE
+  IRANIAN
+  INDIAN
+  USA
+  OTHER
+}
+
+enum Religion {
+  ISLAM
+  CHRISTIANITY
+  HINDUISM
+  BUDDHISM
+  JAINISM
+  ZOROASTRIANISM
+  OTHERS
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  HOLIDAY
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+  PARTIAL
+  WAIVED
+}
+
+enum FeeFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  ONE_TIME
+}
