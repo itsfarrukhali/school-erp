@@ -5,6 +5,7 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   actions?: ReactNode;
+  children?: React.ReactNode;
 }
 
 export function PageHeader({ title, description, actions }: PageHeaderProps) {

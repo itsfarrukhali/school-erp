@@ -80,32 +80,35 @@ model School {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  campuses          Campus[]
-  users             UserSchool[]
-  classes           Class[]
-  subjects          Subject[]
-  students          Student[]
-  feeStructures     FeeStructure[]
-  vouchers          Voucher[]
-  teachers          Teacher[]
-  attendances       Attendance[]
-  salaries          Salary[]
-  bankDetails       BankDetail[]
-  exams             Exam[]
-  timetableSlots    TimetableSlot[]
-  libraryItems      LibraryItem[]
-  inventoryItems    InventoryItem[]
-  transportVehicles TransportVehicle[]
-  transportRoutes   TransportRoute[]
-  notifications     Notification[]
-  onlineClasses     OnlineClass[]
-  schoolAdmins      SchoolAdmin[]
-  accountants       Accountant[]
-  admissionOfficers AdmissionOfficer[]
-  computerOperators ComputerOperator[]
-  payments          Payment[]
-  discountRequests  DiscountRequest[]
-  auditLogs         AuditLog[]
+  campuses              Campus[]
+  users                 UserSchool[]
+  classes               Class[]
+  subjects              Subject[]
+  students              Student[]
+  feeStructures         FeeStructure[]
+  vouchers              Voucher[]
+  teachers              Teacher[]
+  attendances           Attendance[]
+  salaries              Salary[]
+  bankDetails           BankDetail[]
+  exams                 Exam[]
+  timetableSlots        TimetableSlot[]
+  libraryItems          LibraryItem[]
+  inventoryItems        InventoryItem[]
+  transportVehicles     TransportVehicle[]
+  transportRoutes       TransportRoute[]
+  notifications         Notification[]
+  onlineClasses         OnlineClass[]
+  schoolAdmins          SchoolAdmin[]
+  accountants           Accountant[]
+  admissionOfficers     AdmissionOfficer[]
+  computerOperators     ComputerOperator[]
+  payments              Payment[]
+  discountRequests      DiscountRequest[]
+  incomingPayments      IncomingPayment[]
+  paymentReconciliation PaymentReconciliation[]
+  studentAdmissions     StudentAdmission[]
+  auditLogs             AuditLog[]
 
   @@index([code])
   @@index([name])
@@ -125,17 +128,18 @@ model Campus {
   school   School @relation(fields: [schoolId], references: [id])
 
   // Relations
-  classes        Class[]
-  students       Student[]
-  users          UserCampus[]
-  teachers       Teacher[]
-  attendances    Attendance[]
-  vouchers       Voucher[]
-  exams          Exam[]
-  timetableSlots TimetableSlot[]
-  notifications  Notification[]
-  onlineClasses  OnlineClass[]
-  permissions    CampusPermission[]
+  classes           Class[]
+  students          Student[]
+  users             UserCampus[]
+  teachers          Teacher[]
+  attendances       Attendance[]
+  vouchers          Voucher[]
+  exams             Exam[]
+  timetableSlots    TimetableSlot[]
+  notifications     Notification[]
+  onlineClasses     OnlineClass[]
+  permissions       CampusPermission[]
+  studentAdmissions StudentAdmission[]
 
   @@index([schoolId])
   @@index([campusCode])
@@ -417,12 +421,14 @@ model Student {
   classId String?
   class   Class?  @relation(fields: [classId], references: [id])
 
-  attendances      Attendance[]
-  vouchers         Voucher[]
-  payments         Payment[]
-  educationHistory EducationHistory[]
-  discountRequests DiscountRequest[]
-  examResults      ExamResult[]
+  attendances           Attendance[]
+  vouchers              Voucher[]
+  payments              Payment[]
+  educationHistory      EducationHistory[]
+  discountRequests      DiscountRequest[]
+  examResults           ExamResult[]
+  incomingPayments      IncomingPayment[]
+  paymentReconciliation PaymentReconciliation[]
 
   @@unique([schoolId, grNumber])
   @@index([schoolId])
@@ -488,6 +494,7 @@ model FeeStructure {
 model Voucher {
   id              String        @id @default(cuid())
   voucherNumber   String        @unique
+  paymentCode     String        @unique // Unique 6-10 digit code for payment matching
   schoolId        String
   school          School        @relation(fields: [schoolId], references: [id])
   campusId        String?
@@ -498,6 +505,8 @@ model Voucher {
   feeStructure    FeeStructure? @relation(fields: [feeStructureId], references: [id])
   issueDate       DateTime
   dueDate         DateTime
+  month           String? // e.g., "2024-01" for January 2024
+  academicYear    String? // e.g., "2024-2025"
   amountExpected  Float
   discountApplied Float         @default(0)
   amountDue       Float
@@ -506,11 +515,14 @@ model Voucher {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  payments Payment[]
+  payments              Payment[]
+  incomingPayments      IncomingPayment[]
+  paymentReconciliation PaymentReconciliation[]
 
   @@index([studentId])
   @@index([schoolId, issueDate])
   @@index([voucherNumber])
+  @@index([paymentCode])
   @@map("vouchers")
 }
 
@@ -559,6 +571,111 @@ model DiscountRequest {
   @@index([requestedBy])
   @@index([schoolId])
   @@map("discount_requests")
+}
+
+/// ----------------------
+/// Automated Fee Reconciliation System
+/// ----------------------
+
+model IncomingPayment {
+  id                String      @id @default(cuid())
+  schoolId          String
+  school            School      @relation(fields: [schoolId], references: [id])
+  bankReference     String // Bank transaction reference/ID
+  transactionDate   DateTime
+  amount            Float
+  accountHolderName String? // Name on the bank account
+  remarks           String? // Payment note/message from bank
+  rawData           Json? // Store original bank statement row
+  matchStatus       MatchStatus @default(UNMATCHED)
+  matchedAt         DateTime?
+  matchedBy         String? // User ID who performed manual match
+  extractedCode     String? // Payment code extracted from remarks
+  voucherId         String? // Matched voucher
+  voucher           Voucher?    @relation(fields: [voucherId], references: [id])
+  studentId         String? // Matched student
+  student           Student?    @relation(fields: [studentId], references: [id])
+  importBatchId     String? // Group imports together
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  reconciliations PaymentReconciliation[]
+
+  @@unique([schoolId, bankReference])
+  @@index([schoolId, matchStatus])
+  @@index([voucherId])
+  @@index([studentId])
+  @@index([extractedCode])
+  @@index([importBatchId])
+  @@map("incoming_payments")
+}
+
+model PaymentReconciliation {
+  id                String          @id @default(cuid())
+  schoolId          String
+  school            School          @relation(fields: [schoolId], references: [id])
+  incomingPaymentId String
+  incomingPayment   IncomingPayment @relation(fields: [incomingPaymentId], references: [id])
+  voucherId         String
+  voucher           Voucher         @relation(fields: [voucherId], references: [id])
+  studentId         String
+  student           Student         @relation(fields: [studentId], references: [id])
+  matchType         MatchType // AUTO or MANUAL
+  matchConfidence   Float? // 0-100 for auto matches
+  amountMatched     Float
+  discrepancy       Float           @default(0) // If amounts don't match exactly
+  notes             String?
+  reconciledBy      String? // User ID for manual reconciliation
+  reconciledAt      DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+
+  @@index([schoolId])
+  @@index([incomingPaymentId])
+  @@index([voucherId])
+  @@index([studentId])
+  @@map("payment_reconciliations")
+}
+
+model StudentAdmission {
+  id                String          @id @default(cuid())
+  admissionNo       String?         @unique
+  inquiryNo         String?         @unique
+  studentName       String
+  fatherName        String
+  motherName        String
+  dateOfBirth       DateTime?
+  gender            Gender
+  religion          Religion?
+  nationality       Nationality?
+  address           Json
+  phoneNumber       String
+  email             String?
+  previousSchool    String?
+  previousClass     String?
+  classAppliedFor   String
+  status            AdmissionStatus @default(INQUIRY)
+  submittedBy       String // User ID (teacher, admission officer, etc.)
+  submittedByRole   Role
+  reviewedBy        String? // User ID (principal, admission manager)
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  grNumber          String? // Generated on approval
+  enrolledStudentId String? // Link to Student model after enrollment
+  schoolId          String
+  school            School          @relation(fields: [schoolId], references: [id])
+  campusId          String?
+  campus            Campus?         @relation(fields: [campusId], references: [id])
+  documents         Json? // Store document URLs
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([schoolId])
+  @@index([campusId])
+  @@index([status])
+  @@index([submittedBy])
+  @@index([grNumber])
+  @@map("student_admissions")
 }
 
 /// ----------------------
@@ -993,4 +1110,25 @@ enum DiscountStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum MatchStatus {
+  MATCHED
+  UNMATCHED
+  MANUAL_REVIEW
+  PARTIAL_MATCH
+}
+
+enum MatchType {
+  AUTO
+  MANUAL
+}
+
+enum AdmissionStatus {
+  INQUIRY
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ENROLLED
+  CANCELLED
 }

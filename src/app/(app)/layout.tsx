@@ -1,12 +1,11 @@
-// src/app/(app)/layout.tsx
-"use client";
-
+"use client"
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,14 +30,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="w-64 flex-shrink-0">
-        <Sidebar />
-      </aside>
-      <main className="flex-1 flex flex-col overflow-hidden">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
         <DashboardHeader />
         <div className="flex-1 overflow-y-auto p-6">{children}</div>
-      </main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
