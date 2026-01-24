@@ -6,6 +6,7 @@ import type {
   RegisterTeacherInput,
   EnrollStudentInput,
   UpdateUserPermissionsInput,
+  RegisterAdminInput,
 } from "@/validations/user";
 import { Role, Status, Gender } from "@prisma/client";
 import type { ApiResponse } from "@/types";
@@ -111,6 +112,11 @@ export const usersApi = {
   // Get a single user
   async getUser(userId: string): Promise<ApiResponse<User>> {
     return apiClient.get<User>(`/users/${userId}`);
+  },
+
+  // Register Admin
+  async registerAdmin(data: RegisterAdminInput): Promise<ApiResponse<User>> {
+    return apiClient.post<User>("/users/register/admin", data);
   },
 
   // Register Principal/School Admin

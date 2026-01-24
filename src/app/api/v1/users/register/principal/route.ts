@@ -15,13 +15,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     // Only SuperAdmin and Admin can register principals
     if (!["SUPERADMIN", "ADMIN"].includes(session.user.role)) {
       return NextResponse.json(
-        { error: "Only SuperAdmin and Admin can register principals" },
+        { message: "Only SuperAdmin and Admin can register principals" },
         { status: 403 }
       );
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!school) {
-      return NextResponse.json({ error: "School not found" }, { status: 404 });
+      return NextResponse.json({ message: "School not found" }, { status: 404 });
     }
 
     // Check if email or username already exists
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         {
-          error:
+          message:
             existingUser.email === validatedData.email
               ? "Email already exists"
               : "Username already exists",
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
               : "School Administrator",
           address: validatedData.address || Prisma.JsonNull,
           status: "ACTIVE",
-          isEmailVerified: true, // Auto-verify for admin-created accounts
+          isEmailVerified: false, // Require email verification
         },
       });
 
@@ -100,6 +100,17 @@ export async function POST(request: NextRequest) {
           roleForSchool: validatedData.role,
         },
       });
+
+      // If campus is selected, create UserCampus relationship
+      if (validatedData.campusId) {
+        await tx.userCampus.create({
+          data: {
+            userId: user.id,
+            campusId: validatedData.campusId,
+            roleAtCampus: validatedData.role,
+          },
+        });
+      }
 
       // If School Admin, create SchoolAdmin record
       if (validatedData.role === "SCHOOLADMIN") {
@@ -154,6 +165,37 @@ export async function POST(request: NextRequest) {
       return user;
     });
 
+    // Send verification email (non-blocking)
+    const { generateOTP, getOTPExpiry } = await import("@/lib/utils/otp");
+    const { sendVerificationEmail } = await import("@/lib/email/email-service");
+    
+    const otp = generateOTP();
+    const expiry = getOTPExpiry();
+    
+    // Update user with OTP
+    await prisma.user.update({
+      where: { id: result.id },
+      data: {
+        verificationCode: otp,
+        verificationCodeExpiry: expiry,
+        lastVerificationSent: new Date(),
+      },
+    });
+    
+    // Send email (don't block response)
+    sendVerificationEmail(
+      result.email,
+      result.fullName || `${result.firstName} ${result.lastName}`,
+      otp
+    ).catch((error) => {
+      console.error("Failed to send verification email:", error);
+    });
+
+    // Log OTP in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[DEV] Verification OTP for ${result.email}: ${otp}`);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -167,20 +209,21 @@ export async function POST(request: NextRequest) {
         },
         message: `${
           validatedData.role === "PRINCIPAL" ? "Principal" : "School Admin"
-        } registered successfully`,
+        } registered successfully. Please check your email for verification code.`,
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error registering principal:", error);
     if (error instanceof Error && error.name === "ZodError") {
+      console.error("Zod Validation Error:", JSON.stringify(error, null, 2));
       return NextResponse.json(
-        { error: "Validation failed", details: error },
+        { message: "Validation failed", details: error },
         { status: 400 }
       );
     }
     return NextResponse.json(
-      { error: "Failed to register principal" },
+      { message: "Failed to register principal" },
       { status: 500 }
     );
   }

@@ -1,75 +1,96 @@
 // src/app/api/v1/auth/verify-email/route.ts
-import crypto from "crypto";
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import type { ApiResponse } from "@/types";
-import { verifyEmailSchema } from "@/validations/auth/auth";
+import { isOTPExpired, isValidOTPFormat } from "@/lib/utils/otp";
+import { sendWelcomeEmail } from "@/lib/email/email-service";
+
+/**
+ * POST /api/v1/auth/verify-email
+ * Verify user's email with OTP code
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validationResult = verifyEmailSchema.safeParse(body);
+    const { email, otp } = body;
 
-    if (!validationResult.success) {
-      const errors = validationResult.error.issues.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          message: "Validation errors",
-          errors,
-        },
+    // Validation
+    if (!email || !otp) {
+      return NextResponse.json(
+        { success: false, message: "Email and OTP are required" },
         { status: 400 }
       );
     }
 
-    const { email, code } = validationResult.data;
+    if (!isValidOTPFormat(otp)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid OTP format. Must be 6 digits" },
+        { status: 400 }
+      );
+    }
 
+    // Find user
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        fullName: true,
+        isEmailVerified: true,
+        verificationCode: true,
+        verificationCodeExpiry: true,
+      },
     });
 
     if (!user) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json(
         { success: false, message: "User not found" },
         { status: 404 }
       );
     }
 
+    // Check if already verified
     if (user.isEmailVerified) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, message: "Email already verified" },
+      return NextResponse.json(
+        { success: false, message: "Email is already verified" },
         { status: 400 }
       );
     }
 
-    if (!user.verificationCode || !user.verificationCodeExpiry) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, message: "No verification code found" },
+    // Check if OTP exists
+    if (!user.verificationCode) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No verification code found. Please request a new one",
+        },
         { status: 400 }
       );
     }
 
-    if (user.verificationCodeExpiry < new Date()) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, message: "Verification code expired" },
+    // Check if OTP expired
+    if (isOTPExpired(user.verificationCodeExpiry)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Verification code has expired. Please request a new one",
+          expired: true,
+        },
         { status: 400 }
       );
     }
 
-    const hashedProvidedCode = crypto
-      .createHash("sha256")
-      .update(code)
-      .digest("hex");
-
-    if (hashedProvidedCode !== user.verificationCode) {
-      return NextResponse.json<ApiResponse>(
+    // Verify OTP
+    if (user.verificationCode !== otp) {
+      return NextResponse.json(
         { success: false, message: "Invalid verification code" },
         { status: 400 }
       );
     }
 
+    // Update user as verified
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -79,20 +100,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json<ApiResponse>(
-      {
-        success: true,
-        message: "Email verified successfully",
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        entityType: "User",
+        entityId: user.id,
+        action: "UPDATE",
+        performedBy: user.id,
+        after: {
+          isEmailVerified: true,
+        },
+        note: `Email verified for ${user.email}`,
       },
-      { status: 200 }
-    );
+    });
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(
+      user.email,
+      user.fullName || `${user.firstName} ${user.lastName}`
+    ).catch((error) => {
+      console.error("Failed to send welcome email:", error);
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Email verified successfully! You can now log in.",
+    });
   } catch (error) {
-    console.error("Error in email verification:", error);
-    return NextResponse.json<ApiResponse>(
-      {
-        success: false,
-        message: "An error occurred during verification",
-      },
+    console.error("[VERIFY_EMAIL_ERROR]", error);
+    return NextResponse.json(
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }

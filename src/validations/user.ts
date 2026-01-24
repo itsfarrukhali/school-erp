@@ -34,6 +34,12 @@ export const baseUserSchema = z.object({
       postalCode: z.string().optional(),
     })
     .optional(),
+  avatarUrl: z.string().optional(),
+});
+
+// Admin registration schema
+export const registerAdminSchema = baseUserSchema.extend({
+  role: z.literal("ADMIN"),
 });
 
 // School creation schema
@@ -75,6 +81,7 @@ export const createCampusSchema = z.object({
 export const registerPrincipalSchema = baseUserSchema.extend({
   schoolId: z.string().min(1, "School ID is required"),
   role: z.enum(["PRINCIPAL", "SCHOOLADMIN"]),
+  campusId: z.string().optional(),
 });
 
 // Staff registration schema (Accountant, Admission Officer, Campus Head, Operator)
@@ -142,6 +149,7 @@ export const updateUserStatusSchema = z.object({
 
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
 export type CreateCampusInput = z.infer<typeof createCampusSchema>;
+export type RegisterAdminInput = z.infer<typeof registerAdminSchema>;
 export type RegisterPrincipalInput = z.infer<typeof registerPrincipalSchema>;
 export type RegisterStaffInput = z.infer<typeof registerStaffSchema>;
 export type RegisterTeacherInput = z.infer<typeof registerTeacherSchema>;

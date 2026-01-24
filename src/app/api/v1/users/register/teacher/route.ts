@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
           designation: "Teacher",
           address: validatedData.address || Prisma.JsonNull,
           status: "ACTIVE",
-          isEmailVerified: true,
+          isEmailVerified: false, // Require email verification
         },
       });
 
@@ -202,6 +202,37 @@ export async function POST(request: NextRequest) {
       return { user, teacher };
     });
 
+    // Send verification email (non-blocking)
+    const { generateOTP, getOTPExpiry } = await import("@/lib/utils/otp");
+    const { sendVerificationEmail } = await import("@/lib/email/email-service");
+    
+    const otp = generateOTP();
+    const expiry = getOTPExpiry();
+    
+    // Update user with OTP
+    await prisma.user.update({
+      where: { id: result.user.id },
+      data: {
+        verificationCode: otp,
+        verificationCodeExpiry: expiry,
+        lastVerificationSent: new Date(),
+      },
+    });
+    
+    // Send email (don't block response)
+    sendVerificationEmail(
+      result.user.email,
+      result.user.fullName || `${result.user.firstName} ${result.user.lastName}`,
+      otp
+    ).catch((error) => {
+      console.error("Failed to send verification email:", error);
+    });
+
+    // Log OTP in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[DEV] Verification OTP for ${result.user.email}: ${otp}`);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -214,7 +245,7 @@ export async function POST(request: NextRequest) {
           fullName: result.user.fullName,
           role: result.user.role,
         },
-        message: "Teacher registered successfully",
+        message: "Teacher registered successfully. Please check your email for verification code.",
       },
       { status: 201 }
     );

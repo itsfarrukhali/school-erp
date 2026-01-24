@@ -3,7 +3,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users as UsersIcon, Search, Shield, Edit, Trash2, Plus } from "lucide-react";
+import { 
+  Users as UsersIcon, 
+  Search, 
+  Shield, 
+  Edit, 
+  Trash2, 
+  Plus, 
+  Eye,
+  Mail,
+  Phone,
+  MoreVertical
+} from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +41,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usersApi, type User } from "@/lib/api/users";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -114,7 +133,6 @@ export default function UsersListPage() {
 
   const handleRoleFilter = (role: string) => {
     setRoleFilter(role);
-    // Effect will handle fetch
   };
 
   const handlePageChange = (newPage: number) => {
@@ -167,7 +185,7 @@ export default function UsersListPage() {
         </CardHeader>
         <CardContent>
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -195,42 +213,52 @@ export default function UsersListPage() {
             </Select>
           </div>
 
-          {/* Table */}
+          {/* Loading State */}
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               Loading users...
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-8">
-              <UsersIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p className="text-muted-foreground">No users found</p>
+            <div className="text-center py-12">
+              <UsersIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-muted-foreground mb-4">No users found</p>
               <Link href="/superadmin/users/register-principal">
-                <Button variant="link" className="mt-2">
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
                   Register your first user
                 </Button>
               </Link>
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
+              {/* Desktop Table View - Hidden on mobile */}
+              <div className="hidden lg:block rounded-md border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-[250px]">User</TableHead>
+                      <TableHead className="w-[150px]">Role</TableHead>
+                      <TableHead className="w-[200px]">Contact</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="text-right w-[150px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{user.fullName}</div>
-                            <div className="text-xs text-muted-foreground">
-                              @{user.username} • {user.uid}
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-primary">
+                                {user.firstName[0]}{user.lastName[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium">{user.fullName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                @{user.username}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
@@ -243,10 +271,16 @@ export default function UsersListPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {user.email && <div>{user.email}</div>}
+                          <div className="space-y-1">
+                            {user.email && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Mail className="h-3 w-3 text-muted-foreground" />
+                                <span className="truncate max-w-[180px]">{user.email}</span>
+                              </div>
+                            )}
                             {user.phoneNo && (
-                              <div className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3" />
                                 {user.phoneNo}
                               </div>
                             )}
@@ -260,40 +294,49 @@ export default function UsersListPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/superadmin/users/${user.id}`)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                router.push(
-                                  `/superadmin/users/${user.id}/permissions`
-                                )
+                                router.push(`/superadmin/users/${user.id}/permissions`)
                               }
                               title="Manage Permissions"
                             >
                               <Shield className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/superadmin/users/${user.id}`)
-                              }
-                              title="Edit User"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDelete(user.id, user.fullName)
-                              }
-                              className="text-destructive hover:text-destructive"
-                              title="Delete User"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/superadmin/users/${user.id}`)}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(user.id, user.fullName)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -302,8 +345,106 @@ export default function UsersListPage() {
                 </Table>
               </div>
 
+              {/* Mobile Card View - Hidden on desktop */}
+              <div className="lg:hidden space-y-4">
+                {users.map((user) => (
+                  <Card key={user.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-semibold text-primary">
+                              {user.firstName[0]}{user.lastName[0]}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold truncate">{user.fullName}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              @{user.username} • {user.uid}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={user.status === "ACTIVE" ? "default" : "secondary"}
+                          className="ml-2 flex-shrink-0"
+                        >
+                          {user.status === "ACTIVE" ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        <Badge
+                          variant="outline"
+                          className={`${roleColors[user.role] || ""} text-xs`}
+                        >
+                          {roleLabels[user.role] || user.role}
+                        </Badge>
+
+                        {user.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                        )}
+                        {user.phoneNo && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3 flex-shrink-0" />
+                            {user.phoneNo}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-3 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => router.push(`/superadmin/users/${user.id}`)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            router.push(`/superadmin/users/${user.id}/permissions`)
+                          }
+                        >
+                          <Shield className="mr-2 h-4 w-4" />
+                          Permissions
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/superadmin/users/${user.id}`)}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(user.id, user.fullName)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
               {/* Pagination */}
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t">
                 <div className="text-sm text-muted-foreground">
                   Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
                   {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
@@ -314,9 +455,7 @@ export default function UsersListPage() {
                     variant="outline"
                     size="sm"
                     disabled={pagination.page === 1}
-                    onClick={() =>
-                      handlePageChange(pagination.page - 1)
-                    }
+                    onClick={() => handlePageChange(pagination.page - 1)}
                   >
                     Previous
                   </Button>
@@ -324,9 +463,7 @@ export default function UsersListPage() {
                     variant="outline"
                     size="sm"
                     disabled={pagination.page === pagination.totalPages}
-                    onClick={() =>
-                      handlePageChange(pagination.page + 1)
-                    }
+                    onClick={() => handlePageChange(pagination.page + 1)}
                   >
                     Next
                   </Button>

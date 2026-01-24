@@ -12,15 +12,23 @@ export default function RegisterPrincipalPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Register Principal / School Admin"
-        description="Register a new principal or school administrator"
+        title="Register User"
+        description="Register a new system user (Admin, Principal, School Admin)"
       />
 
-      <Tabs defaultValue="principal" className="w-full">
+      <Tabs defaultValue="admin" className="w-full">
         <TabsList className="mb-4">
+          <TabsTrigger value="admin">Admin</TabsTrigger>
           <TabsTrigger value="principal">Principal</TabsTrigger>
           <TabsTrigger value="schooladmin">School Admin</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="admin">
+          <RegisterUserForm
+            userType="admin"
+            onSuccess={() => router.push("/superadmin/users")}
+          />
+        </TabsContent>
 
         <TabsContent value="principal">
           <RegisterUserForm

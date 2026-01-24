@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only SuperAdmin and Admin can create schools
-    if (![" SUPERADMIN", "ADMIN"].includes(session.user.role)) {
+    if (!["SUPERADMIN", "ADMIN"].includes(session.user.role)) {
       return NextResponse.json(
         { 
           success: false,

@@ -25,7 +25,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
@@ -92,8 +91,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 icon: Users,
               },
               {
-                title: "Register Principal",
-                url: "/superadmin/users/register-principal",
+                title: "Register Users",
+                url: "/superadmin/users/register-users",
                 icon: UserPlus,
               },
             ],
@@ -150,8 +149,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 icon: Users,
               },
               {
-                title: "Register Principal",
-                url: "/admin/staff/register-principal",
+                title: "Register Users",
+                url: "/admin/staff/register-users",
                 icon: UserPlus,
               },
               {
