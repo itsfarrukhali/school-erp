@@ -43,12 +43,8 @@
     "date-fns": "^4.1.0",
     "debounce": "^3.0.0",
     "lucide-react": "^0.554.0",
-<<<<<<< HEAD
     "nanoid": "^5.1.6",
-    "next": "15.5.2",
-=======
     "next": "15.5.9",
->>>>>>> 85f3c31500efb728e72723548bc04d3c1168f5a3
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.12",
@@ -70,7 +66,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.2",
+    "eslint-config-next": "15.5.9",
     "prisma": "^6.16.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
