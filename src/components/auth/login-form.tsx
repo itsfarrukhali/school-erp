@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { authApi } from "@/lib/api/auth";
 import { toast } from "sonner";
+import { getSession } from "next-auth/react";
 
 const loginSchema = z.object({
   identifier: z
@@ -63,20 +64,20 @@ export function LoginForm() {
           description: "You have successfully logged in.",
         });
         
+        // Refresh router to update server components with new session
+        router.refresh();
+
         // Get user session to determine role and redirect
-        const sessionResponse = await fetch('/api/auth/session');
-        const sessionData = await sessionResponse.json();
+        const session = await getSession();
         
-        if (sessionData?.user?.role) {
+        if (session?.user?.role) {
           const { getDashboardRoute } = await import('@/lib/utils/dashboard-routes');
-          const dashboardPath = getDashboardRoute(sessionData.user.role);
+          const dashboardPath = getDashboardRoute(session.user.role);
           router.push(dashboardPath);
         } else {
           // Fallback to superadmin dashboard if role not found
           router.push('/superadmin');
         }
-        
-        router.refresh();
       } else {
         toast.error("Login Failed", {
           description:
